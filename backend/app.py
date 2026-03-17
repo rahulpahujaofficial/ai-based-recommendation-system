@@ -27,28 +27,25 @@ def create_app(config: Config = None) -> Flask:
     # ------------------------------------------------------------------
     db.init_app(app)
 
-    # Configure CORS to allow both localhost and Codespace URLs
+    # Configure CORS — allow localhost, any GitHub Codespace domain, and the
+    # explicit FRONTEND_URL set in .env.
+    # Flask-CORS 6.x uses re.match() for strings that contain regex chars,
+    # so we include a regex pattern for *.app.github.dev alongside the
+    # exact-match localhost origins.
     frontend_url = app.config.get("FRONTEND_URL", "http://localhost:5173")
+
     allowed_origins = [
         frontend_url,
-        "http://localhost:5173",        # Vite default development port
-        "http://localhost:5174",        # Alternative dev port
-        "http://localhost:3000",        # Next.js/other dev port
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
         "http://127.0.0.1:3000",
-
+        # Matches any GitHub Codespace URL on any port (detected as regex by Flask-CORS)
+        r"https?://.*\.app\.github\.dev$",
     ]
-    
-    # Add support for Codespace URLs (both http and https)
-    if frontend_url and ("app.github.dev" in frontend_url or "preview.app.github.dev" in frontend_url):
-        allowed_origins.append(frontend_url)
-        # Also allow http version of https Codespace URLs
-        if frontend_url.startswith("https://"):
-            http_version = frontend_url.replace("https://", "http://")
-            allowed_origins.append(http_version)
 
-    # Enable CORS with proper configuration
     CORS(
         app,
         resources={r"/api/*": {
@@ -56,11 +53,10 @@ def create_app(config: Config = None) -> Flask:
             "supports_credentials": True,
             "allow_headers": ["Content-Type", "Authorization"],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "max_age": 3600
+            "max_age": 3600,
         }},
     )
-    
-    # Log CORS configuration in debug mode
+
     if app.debug:
         print(f"\n📡 CORS Allowed Origins: {allowed_origins}\n")
 
