@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:api": "node src/tests/api.test.js",
+    "test:api:watch": "nodemon --watch src/tests/api.test.js --exec 'npm run test:api'",
+    "test": "npm run test:api"
   },
   "dependencies": {
     "@react-three/drei": "^9.105.6",

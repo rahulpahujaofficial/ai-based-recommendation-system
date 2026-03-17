@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Search, Plus, Upload, Grid3X3, List, Star, Package,
-  Trash2, Edit2, Eye, CheckCircle2, Clock, X, Save
+  Trash2, Edit2, Eye, CheckCircle2, Clock, X, Save, Globe, Link as LinkIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,7 @@ import { useStore } from '@/context/StoreContext'
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Format tags from various input types to array
+ * Format tags from string to array
  */
 const formatTags = (tags) => {
   if (Array.isArray(tags)) return tags
@@ -27,14 +27,14 @@ const formatTags = (tags) => {
 }
 
 /**
- * Parse tags from comma-separated string
+ * Parse tags from form string to array
  */
 const parseTagsFromForm = (tagsString) => {
   return tagsString.split(',').map(t => t.trim()).filter(Boolean)
 }
 
 /**
- * Validate product form data
+ * Validate product form
  */
 const validateProductForm = (form) => {
   if (!form.name?.trim()) return 'Product name is required'
@@ -44,7 +44,7 @@ const validateProductForm = (form) => {
 }
 
 /**
- * Calculate conversion rate percentage
+ * Calculate conversion rate
  */
 const calculateConversionRate = (clicks, conversions) => {
   if (!clicks || clicks === 0) return 0
@@ -52,7 +52,7 @@ const calculateConversionRate = (clicks, conversions) => {
 }
 
 /**
- * Build payload for product API requests
+ * Build product form data for API
  */
 const buildProductPayload = (form, storeId) => {
   return {
@@ -71,16 +71,22 @@ const buildProductPayload = (form, storeId) => {
 function ProductCard({ product, view, onEdit, onDelete }) {
   const [showActions, setShowActions] = useState(false)
   const p = product
+
+  // Calculate conversion rate
   const conversionRate = useMemo(() => calculateConversionRate(p.click_count, p.conversion_count), [p.click_count, p.conversion_count])
 
+  // List view rendering
   if (view === 'list') {
     return (
       <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
         className="flex items-center gap-4 p-4 rounded-xl glass-card hover:border-white/15 transition-all group">
+        {/* Product Image */}
         {p.image_url
           ? <img src={p.image_url} alt={p.name} className="w-14 h-14 rounded-xl object-cover shrink-0" />
           : <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0"><Package size={20} className="text-white/20" /></div>
         }
+        
+        {/* Product Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <p className="text-sm font-medium text-white truncate">{p.name}</p>
@@ -88,11 +94,24 @@ function ProductCard({ product, view, onEdit, onDelete }) {
           </div>
           <p className="text-xs text-white/40">{p.category} · {p.stock} in stock</p>
         </div>
+        
+        {/* Stats */}
         <div className="hidden md:flex items-center gap-6 text-center">
-          <div><p className="text-sm font-semibold text-white">{formatNumber(p.click_count || 0)}</p><p className="text-xs text-white/30">Clicks</p></div>
-          <div><p className="text-sm font-semibold text-emerald-400">{p.conversion_count || 0}</p><p className="text-xs text-white/30">Converts</p></div>
-          <div><p className="text-sm font-semibold text-white">{formatPrice(p.price)}</p><p className="text-xs text-white/30">Price</p></div>
+          <div>
+            <p className="text-sm font-semibold text-white">{formatNumber(p.click_count || 0)}</p>
+            <p className="text-xs text-white/30">Clicks</p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-emerald-400">{p.conversion_count || 0}</p>
+            <p className="text-xs text-white/30">Converts</p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">{formatPrice(p.price)}</p>
+            <p className="text-xs text-white/30">Price</p>
+          </div>
         </div>
+        
+        {/* Actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" className="w-8 h-8 text-white/40" onClick={() => onEdit(p)}><Edit2 size={13} /></Button>
           <Button variant="ghost" size="icon" className="w-8 h-8 text-red-400/60 hover:text-red-400" onClick={() => onDelete(p.id)}><Trash2 size={13} /></Button>
@@ -101,25 +120,34 @@ function ProductCard({ product, view, onEdit, onDelete }) {
     )
   }
 
+  // Grid view rendering
   return (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
       className="glass-card-hover rounded-2xl overflow-hidden group"
       onMouseEnter={() => setShowActions(true)} onMouseLeave={() => setShowActions(false)}>
+      
+      {/* Product Image Header */}
       <div className="relative aspect-square overflow-hidden bg-white/5">
         {p.image_url
           ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
           : <div className="w-full h-full flex items-center justify-center"><Package size={40} className="text-white/10" /></div>
         }
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        
+        {/* Status Badge */}
         <div className="absolute top-3 left-3">
           <Badge variant={p.status === 'active' ? 'success' : 'warning'} className="text-[10px]">
             {p.status === 'active' ? <CheckCircle2 size={9} className="mr-1" /> : <Clock size={9} className="mr-1" />}{p.status}
           </Badge>
         </div>
+        
+        {/* Action Buttons Overlay */}
         <div className={cn('absolute inset-0 flex items-center justify-center gap-2 transition-opacity duration-200', showActions ? 'opacity-100' : 'opacity-0')}>
           <Button variant="glass" size="sm" className="text-xs h-8" onClick={() => onEdit(p)}><Edit2 size={12} /> Edit</Button>
           <Button variant="glass" size="sm" className="text-xs h-8 text-red-400" onClick={() => onDelete(p.id)}><Trash2 size={12} /></Button>
         </div>
+        
+        {/* Rating */}
         {p.rating && (
           <div className="absolute bottom-3 left-3 flex items-center gap-1">
             <Star size={11} className="text-amber-400 fill-amber-400" />
@@ -128,9 +156,12 @@ function ProductCard({ product, view, onEdit, onDelete }) {
           </div>
         )}
       </div>
+      
+      {/* Product Details */}
       <div className="p-4">
         <p className="text-xs text-violet-400 font-medium mb-1">{p.category}</p>
         <p className="text-sm font-semibold text-white mb-2 leading-snug line-clamp-2">{p.name}</p>
+        
         <div className="flex items-center justify-between mb-3">
           <span className="text-base font-bold text-white">{formatPrice(p.price)}</span>
           <div className="text-right">
@@ -138,11 +169,13 @@ function ProductCard({ product, view, onEdit, onDelete }) {
             <p className="text-[10px] text-white/30">{p.conversion_count || 0} sales</p>
           </div>
         </div>
+        
+        {/* Conversion Rate Bar */}
         {p.click_count > 0 && (
           <>
             <div className="w-full bg-white/5 rounded-full h-1.5">
               <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400"
-                style={{ width: `${Math.min(100, conversionRate)}%` }} />
+                style={{ width: `${Math.min(100, (conversionRate / 100) * 100)}%` }} />
             </div>
             <p className="text-[10px] text-white/30 mt-1">{conversionRate.toFixed(1)}% conversion rate</p>
           </>
@@ -158,6 +191,8 @@ function ProductCard({ product, view, onEdit, onDelete }) {
 
 function ProductModal({ product, storeId, onClose, onSaved }) {
   const isEdit = !!product
+  
+  // Form state
   const [form, setForm] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -169,6 +204,7 @@ function ProductModal({ product, storeId, onClose, onSaved }) {
     stock: product?.stock || 0,
     status: product?.status || 'active',
   })
+  
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -177,6 +213,7 @@ function ProductModal({ product, storeId, onClose, onSaved }) {
    */
   const handleFieldChange = useCallback((key, value) => {
     setForm(prev => ({ ...prev, [key]: value }))
+    // Clear error when user starts typing
     if (error) setError('')
   }, [error])
 
@@ -185,20 +222,26 @@ function ProductModal({ product, storeId, onClose, onSaved }) {
    */
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
+    
+    // Validate form
     const validationError = validateProductForm(form)
     if (validationError) {
       setError(validationError)
       return
     }
+    
     setSaving(true)
     setError('')
+    
     try {
       const payload = buildProductPayload(form, storeId)
+      
       if (isEdit) {
         await productsApi.update(product.id, payload)
       } else {
         await productsApi.create(payload)
       }
+      
       onSaved()
     } catch (err) {
       setError(err.message || 'Failed to save product')
@@ -208,146 +251,166 @@ function ProductModal({ product, storeId, onClose, onSaved }) {
   }, [form, storeId, isEdit, product?.id, onSaved])
 
   /**
-   * Render form field
+   * Render form field input
    */
   const renderField = useCallback((key, label, type = 'text', hint) => (
     <div>
       <Label className="text-xs mb-1.5 block">{label}</Label>
-      <Input type={type} value={form[key]} onChange={(e) => handleFieldChange(key, e.target.value)} placeholder={hint} disabled={saving} />
+      <Input 
+        type={type} 
+        value={form[key]} 
+        onChange={(e) => handleFieldChange(key, e.target.value)}
+        placeholder={hint}
+        disabled={saving}
+      />
     </div>
   ), [form, saving, handleFieldChange])
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }} 
+        animate={{ opacity: 1, scale: 1 }}
         className="glass-card rounded-2xl p-6 max-w-lg w-full border border-white/10 max-h-[90vh] overflow-y-auto scrollbar-thin">
+        
+        {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-bold text-white">{isEdit ? 'Edit Product' : 'Add Product'}</h3>
-          <button onClick={onClose} className="text-white/40 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10" disabled={saving}><X size={16} /></button>
+          <h3 className="text-lg font-bold text-white">
+            {isEdit ? 'Edit Product' : 'Add Product'}
+          </h3>
+          <button 
+            onClick={onClose} 
+            className="text-white/40 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10"
+            disabled={saving}>
+            <X size={16} />
+          </button>
         </div>
+
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Product Name */}
           {renderField('name', 'Product Name *', 'text', 'e.g. Premium Wireless Headphones')}
+          
+          {/* Price and Stock */}
           <div className="grid grid-cols-2 gap-3">
             {renderField('price', 'Price ($)', 'number', '29.99')}
             {renderField('stock', 'Stock', 'number', '100')}
           </div>
+          
+          {/* Category and Tags */}
           {renderField('category', 'Category', 'text', 'Electronics, Fashion…')}
           {renderField('tags', 'Tags (comma-separated)', 'text', 'wireless, bluetooth, audio')}
+          
+          {/* Image URL and Product URL */}
           {renderField('image_url', 'Image URL', 'url', 'https://example.com/image.jpg')}
           {renderField('product_url', 'Product URL', 'url', 'https://mystore.com/products/…')}
+          
+          {/* Description */}
           <div>
             <Label className="text-xs mb-1.5 block">Description</Label>
-            <textarea value={form.description} onChange={(e) => handleFieldChange('description', e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 resize-none disabled:opacity-50" rows={3} disabled={saving} />
+            <textarea 
+              value={form.description} 
+              onChange={(e) => handleFieldChange('description', e.target.value)}
+              placeholder="Product description and details..."
+              disabled={saving}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 resize-none disabled:opacity-50" 
+              rows={3} 
+            />
           </div>
+          
+          {/* Status */}
           <div>
             <Label className="text-xs mb-1.5 block">Status</Label>
-            <select value={form.status} onChange={(e) => handleFieldChange('status', e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 disabled:opacity-50" disabled={saving}>
+            <select 
+              value={form.status} 
+              onChange={(e) => handleFieldChange('status', e.target.value)}
+              disabled={saving}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 disabled:opacity-50">
               <option value="active" className="bg-gray-900">Active</option>
               <option value="draft" className="bg-gray-900">Draft</option>
               <option value="archived" className="bg-gray-900">Archived</option>
             </select>
           </div>
-          {error && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
+          
+          {/* Error Message */}
+          {error && (
+            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+          
+          {/* Actions */}
           <div className="flex gap-3 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={saving}>Cancel</Button>
-            <Button type="submit" variant="glow" className="flex-1" disabled={saving}>
-              {saving ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving…</span>
-                : <><Save size={13} /> {isEdit ? 'Update' : 'Create'}</>}
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="flex-1" 
+              onClick={onClose}
+              disabled={saving}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="glow" 
+              className="flex-1" 
+              disabled={saving}>
+              {saving ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving…
+                </span>
+              ) : (
+                <><Save size={13} /> {isEdit ? 'Update' : 'Create'}</>
+              )}
             </Button>
           </div>
         </form>
       </motion.div>
     </div>
   )
-}
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── IMPORT MODAL (CSV/API/SCRAPE) ─────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// ── CSV / Ingest Modal ────────────────────────────────────────────────────────
 function ImportModal({ storeId, onClose, onImported }) {
-  const [tab, setTab] = useState('csv')
+  const [tab, setTab] = useState('csv') // csv | api | scrape
   const [file, setFile] = useState(null)
   const [dragOver, setDragOver] = useState(false)
   const [apiUrl, setApiUrl] = useState('')
   const [scrapeUrl, setScrapeUrl] = useState('')
-  const [scrapeType, setScrapeType] = useState('product')
+  const [scrapeType, setScrapeType] = useState('product') // product | catalog
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const fileRef = useRef()
 
-  /**
-   * Handle file drop
-   */
-  const handleDrop = useCallback((e) => {
+  const handleDrop = (e) => {
     e.preventDefault()
     setDragOver(false)
     const f = e.dataTransfer.files[0]
-    if (f?.name.endsWith('.csv')) {
-      setFile(f)
-      setError('')
-    } else {
-      setError('Please select a valid CSV file')
-    }
-  }, [])
+    if (f?.name.endsWith('.csv')) setFile(f)
+  }
 
-  /**
-   * Handle file selection
-   */
-  const handleFileSelect = useCallback((e) => {
-    const f = e.target.files[0]
-    if (f) {
-      setFile(f)
-      setError('')
-    }
-  }, [])
-
-  /**
-   * Validate import inputs
-   */
-  const validateImportInputs = useCallback(() => {
-    if (tab === 'csv' && !file) {
-      setError('Please select a CSV file')
-      return false
-    } else if (tab === 'api' && !apiUrl.trim()) {
-      setError('API URL is required')
-      return false
-    } else if (tab === 'scrape' && !scrapeUrl.trim()) {
-      setError('URL is required')
-      return false
-    }
-    return true
-  }, [tab, file, apiUrl, scrapeUrl])
-
-  /**
-   * Handle import
-   */
-  const handleImport = useCallback(async () => {
-    if (!validateImportInputs()) return
+  const handleImport = async () => {
     setLoading(true)
     setError('')
     try {
       let res
       if (tab === 'csv') {
+        if (!file) throw new Error('Please select a CSV file')
         res = await ingestApi.csv(storeId, file)
       } else if (tab === 'api') {
+        if (!apiUrl.trim()) throw new Error('API URL is required')
         res = await ingestApi.api(storeId, apiUrl, 'products')
       } else {
+        if (!scrapeUrl.trim()) throw new Error('URL is required')
         res = scrapeType === 'product'
           ? await ingestApi.scrapeProduct(storeId, scrapeUrl)
           : await ingestApi.scrapeCatalog(storeId, scrapeUrl, 20)
       }
       setResult(res)
       onImported()
-    } catch (err) {
-      setError(err.message || 'Import failed')
-    } finally {
-      setLoading(false)
-    }
-  }, [tab, file, apiUrl, scrapeUrl, scrapeType, storeId, validateImportInputs, onImported])
+    } catch (err) { setError(err.message) }
+    setLoading(false)
+  }
 
   if (result) {
     const count = result.inserted ?? result.products_found ?? 1
@@ -359,8 +422,8 @@ function ImportModal({ storeId, onClose, onImported }) {
             <CheckCircle2 size={28} className="text-emerald-400" />
           </div>
           <h4 className="text-lg font-semibold text-white mb-1">Import Successful!</h4>
-          <p className="text-sm text-white/50 mb-2">{count} product{count !== 1 ? 's' : ''} processed.</p>
-          {result.errors > 0 && <p className="text-xs text-amber-400 mb-4">{result.errors} row{result.errors !== 1 ? 's' : ''} had errors.</p>}
+          <p className="text-sm text-white/50 mb-2">{count} product(s) processed.</p>
+          {result.errors > 0 && <p className="text-xs text-amber-400 mb-4">{result.errors} rows had errors.</p>}
           <Button variant="glow" onClick={onClose}>Done</Button>
         </motion.div>
       </div>
@@ -373,60 +436,69 @@ function ImportModal({ storeId, onClose, onImported }) {
         className="glass-card rounded-2xl p-6 max-w-lg w-full border border-white/10">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold text-white">Import Products</h3>
-          <button onClick={onClose} className="text-white/40 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10" disabled={loading}><X size={16} /></button>
+          <button onClick={onClose} className="text-white/40 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10"><X size={16} /></button>
         </div>
+
+        {/* Tab selector */}
         <div className="flex gap-2 mb-5">
           {[['csv', 'CSV Upload'], ['api', 'API / Shopify'], ['scrape', 'Web Scrape']].map(([id, label]) => (
-            <button key={id} onClick={() => { setTab(id); setError('') }} disabled={loading}
-              className={cn('flex-1 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50', tab === id ? 'bg-violet-600 text-white' : 'glass-card text-white/50 hover:text-white')}>
+            <button key={id} onClick={() => setTab(id)}
+              className={cn('flex-1 py-1.5 rounded-lg text-xs font-medium transition-all', tab === id ? 'bg-violet-600 text-white' : 'glass-card text-white/50 hover:text-white')}>
               {label}
             </button>
           ))}
         </div>
+
         {tab === 'csv' && (
           <>
             <div onDragOver={(e) => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
               onClick={() => fileRef.current?.click()}
               className={cn('border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200 mb-4 cursor-pointer',
                 dragOver ? 'border-violet-400 bg-violet-500/10' : 'border-white/15 hover:border-white/25')}>
-              <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFileSelect} disabled={loading} />
+              <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
               <Upload size={28} className="text-white/30 mx-auto mb-2" />
-              {file ? <p className="text-sm text-emerald-400 font-medium">✓ {file.name}</p>
+              {file ? <p className="text-sm text-emerald-400 font-medium">{file.name}</p>
                 : <><p className="text-sm font-medium text-white mb-1">Drop CSV file here or click to browse</p>
                   <p className="text-xs text-white/40">Shopify exports, custom CSV · Max 16 MB</p></>}
             </div>
-            <p className="text-xs text-white/40 mb-4">Required: <code className="text-violet-300">name</code>. Optional: category, price, image_url, product_url, tags, stock, description</p>
+            <p className="text-xs text-white/40 mb-4">Required column: <code className="text-violet-300">name</code>. Optional: category, price, image_url, product_url, tags, stock, description</p>
           </>
         )}
+
         {tab === 'api' && (
           <div className="mb-4 space-y-3">
             <div>
               <Label className="text-xs mb-1.5 block">JSON API URL</Label>
-              <Input value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} placeholder="https://mystore.myshopify.com/products.json" disabled={loading} />
+              <Input value={apiUrl} onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="https://mystore.myshopify.com/products.json" />
             </div>
             <p className="text-xs text-white/40">Works with Shopify JSON feeds (<code className="text-violet-300">/products.json</code>) and any public JSON product API.</p>
           </div>
         )}
+
         {tab === 'scrape' && (
           <div className="mb-4 space-y-3">
             <div className="flex gap-2 mb-2">
               {[['product', 'Single Product'], ['catalog', 'Catalog Page']].map(([id, label]) => (
-                <button key={id} onClick={() => setScrapeType(id)} disabled={loading}
-                  className={cn('flex-1 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50', scrapeType === id ? 'bg-violet-600 text-white' : 'glass-card text-white/50 hover:text-white')}>
+                <button key={id} onClick={() => setScrapeType(id)}
+                  className={cn('flex-1 py-1.5 rounded-lg text-xs font-medium transition-all', scrapeType === id ? 'bg-violet-600 text-white' : 'glass-card text-white/50 hover:text-white')}>
                   {label}
                 </button>
               ))}
             </div>
             <div>
               <Label className="text-xs mb-1.5 block">{scrapeType === 'product' ? 'Product Page URL' : 'Catalog / Collection URL'}</Label>
-              <Input value={scrapeUrl} onChange={(e) => setScrapeUrl(e.target.value)} placeholder={scrapeType === 'product' ? 'https://store.com/products/headphones' : 'https://store.com/collections/all'} disabled={loading} />
+              <Input value={scrapeUrl} onChange={(e) => setScrapeUrl(e.target.value)}
+                placeholder={scrapeType === 'product' ? 'https://store.com/products/headphones' : 'https://store.com/collections/all'} />
             </div>
             <p className="text-xs text-white/40">{scrapeType === 'product' ? 'Scrapes a single product page.' : 'Finds all product links on the page and scrapes each (up to 20).'}</p>
           </div>
         )}
+
         {error && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4">{error}</p>}
+
         <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button variant="glow" className="flex-1" onClick={handleImport} disabled={loading}>
             {loading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Importing…</span>
               : 'Import Products'}
@@ -437,26 +509,14 @@ function ImportModal({ storeId, onClose, onImported }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── DELETE CONFIRMATION MODAL ─────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// ── Delete Confirm ────────────────────────────────────────────────────────────
 function DeleteConfirm({ productId, storeId, onClose, onDeleted }) {
   const [deleting, setDeleting] = useState(false)
-
-  /**
-   * Handle product deletion
-   */
-  const handleDelete = useCallback(async () => {
+  const handleDelete = async () => {
     setDeleting(true)
-    try {
-      await productsApi.delete(productId, storeId)
-      onDeleted()
-    } catch (_) {
-      setDeleting(false)
-    }
-  }, [productId, storeId, onDeleted])
-
+    try { await productsApi.delete(productId, storeId); onDeleted() }
+    catch (_) { setDeleting(false) }
+  }
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
@@ -467,7 +527,7 @@ function DeleteConfirm({ productId, storeId, onClose, onDeleted }) {
         <h3 className="text-base font-semibold text-white mb-2">Delete Product?</h3>
         <p className="text-xs text-white/50 mb-5">This action cannot be undone.</p>
         <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={onClose} disabled={deleting}>Cancel</Button>
+          <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button variant="destructive" className="flex-1 bg-red-900/50 text-red-400 border border-red-500/30 hover:bg-red-900/70" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting…' : 'Delete'}
           </Button>
@@ -477,134 +537,54 @@ function DeleteConfirm({ productId, storeId, onClose, onDeleted }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── MAIN PRODUCTS PAGE COMPONENT ──────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// ── Main Page ────────────────────────────────────────────────────────────────
 export default function ProductsPage() {
   const { storeId, refreshStore } = useStore()
-
-  // State: Products and categories
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState(['All'])
   const [total, setTotal] = useState(0)
-
-  // State: Filters and view
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
   const [view, setView] = useState('grid')
-
-  // State: Loading and modals
   const [loading, setLoading] = useState(true)
   const [editProduct, setEditProduct] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showImport, setShowImport] = useState(false)
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Data Fetching Functions
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Fetch products from API with current filters
-   */
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = async () => {
     setLoading(true)
     try {
       const params = { page, per_page: 20 }
       if (search) params.q = search
       if (activeCategory !== 'All') params.category = activeCategory
-      
       const data = await productsApi.list(storeId, params)
       setProducts(data.products || [])
       setTotal(data.total || 0)
-    } catch (err) {
-      console.error('Failed to fetch products:', err)
-    }
+    } catch (_) {}
     setLoading(false)
-  }, [storeId, page, search, activeCategory])
+  }
 
-  /**
-   * Fetch categories for filter
-   */
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = async () => {
     try {
       const data = await productsApi.categories(storeId)
       setCategories(['All', ...(data.categories || [])])
-    } catch (err) {
-      console.error('Failed to fetch categories:', err)
-    }
-  }, [storeId])
+    } catch (_) {}
+  }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Event Handlers
-  // ─────────────────────────────────────────────────────────────────────────────
+  useEffect(() => { fetchCategories() }, [storeId])
+  useEffect(() => { fetchProducts() }, [storeId, page, search, activeCategory])
 
-  /**
-   * Handle search input
-   */
-  const handleSearch = useCallback((val) => {
-    setSearch(val)
-    setPage(1)
-  }, [])
+  const handleSearch = (val) => { setSearch(val); setPage(1) }
+  const handleCategory = (cat) => { setActiveCategory(cat); setPage(1) }
 
-  /**
-   * Handle category filter change
-   */
-  const handleCategory = useCallback((cat) => {
-    setActiveCategory(cat)
-    setPage(1)
-  }, [])
-
-  /**
-   * Handle successful product save
-   */
-  const handleAfterSave = useCallback(() => {
-    setEditProduct(null)
-    setShowAdd(false)
-    fetchProducts()
-    fetchCategories()
-    refreshStore()
-  }, [fetchProducts, fetchCategories, refreshStore])
-
-  /**
-   * Handle successful product deletion
-   */
-  const handleAfterDelete = useCallback(() => {
-    setDeleteId(null)
-    fetchProducts()
-    refreshStore()
-  }, [fetchProducts, refreshStore])
-
-  /**
-   * Handle successful import
-   */
-  const handleAfterImport = useCallback(() => {
-    fetchProducts()
-    fetchCategories()
-    refreshStore()
-  }, [fetchProducts, fetchCategories, refreshStore])
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Effects
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    fetchCategories()
-  }, [storeId, fetchCategories])
-
-  useEffect(() => {
-    fetchProducts()
-  }, [storeId, page, search, activeCategory, fetchProducts])
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────────────────────────────
+  const afterSave = () => { setEditProduct(null); setShowAdd(false); fetchProducts(); fetchCategories(); refreshStore() }
+  const afterDelete = () => { setDeleteId(null); fetchProducts(); refreshStore() }
+  const afterImport = () => { fetchProducts(); fetchCategories(); refreshStore() }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-white">Products</h2>
@@ -638,7 +618,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Products List */}
+      {/* Products */}
       {loading ? (
         <div className="text-center py-16 text-white/30 text-sm">Loading products…</div>
       ) : products.length === 0 ? (
@@ -666,11 +646,10 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Modals */}
-      {showAdd && <ProductModal storeId={storeId} onClose={() => setShowAdd(false)} onSaved={handleAfterSave} />}
-      {editProduct && <ProductModal product={editProduct} storeId={storeId} onClose={() => setEditProduct(null)} onSaved={handleAfterSave} />}
-      {deleteId && <DeleteConfirm productId={deleteId} storeId={storeId} onClose={() => setDeleteId(null)} onDeleted={handleAfterDelete} />}
-      {showImport && <ImportModal storeId={storeId} onClose={() => setShowImport(false)} onImported={handleAfterImport} />}
+      {showAdd && <ProductModal storeId={storeId} onClose={() => setShowAdd(false)} onSaved={afterSave} />}
+      {editProduct && <ProductModal product={editProduct} storeId={storeId} onClose={() => setEditProduct(null)} onSaved={afterSave} />}
+      {deleteId && <DeleteConfirm productId={deleteId} storeId={storeId} onClose={() => setDeleteId(null)} onDeleted={afterDelete} />}
+      {showImport && <ImportModal storeId={storeId} onClose={() => setShowImport(false)} onImported={afterImport} />}
     </div>
   )
 }

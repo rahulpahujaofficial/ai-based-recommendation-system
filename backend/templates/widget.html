@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecoAI Widget</title>
+  <style>
+    :root {
+      --primary: {{ config.primary_color }};
+      --bg: {{ '#0f0f1a' if config.theme == 'dark' else '#ffffff' }};
+      --card-bg: {{ '#1a1a2e' if config.theme == 'dark' else '#f8f8f8' }};
+      --text: {{ '#e2e8f0' if config.theme == 'dark' else '#1a202c' }};
+      --sub-text: {{ '#94a3b8' if config.theme == 'dark' else '#718096' }};
+      --border: {{ 'rgba(255,255,255,0.08)' if config.theme == 'dark' else 'rgba(0,0,0,0.08)' }};
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    /* ---- Carousel ---- */
+    .carousel-wrapper {
+      position: relative;
+    }
+    .carousel {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+    .carousel::-webkit-scrollbar { display: none; }
+
+    /* ---- Grid ---- */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    /* ---- List ---- */
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ---- Card (shared) ---- */
+    .card {
+      flex: 0 0 160px;
+      scroll-snap-align: start;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: var(--border);
+    }
+    .card-body {
+      padding: 10px;
+    }
+    .card-name {
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.4;
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-price {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .card-reason {
+      font-size: 10px;
+      color: var(--sub-text);
+      margin-top: 3px;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 20px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ---- List card overrides ---- */
+    .list .card {
+      flex: unset;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .list .card img {
+      width: 64px;
+      height: 64px;
+      aspect-ratio: 1;
+      flex-shrink: 0;
+    }
+
+    /* ---- Empty / Error ---- */
+    .empty {
+      text-align: center;
+      color: var(--sub-text);
+      font-size: 13px;
+      padding: 24px 0;
+    }
+    .powered-by {
+      text-align: right;
+      margin-top: 12px;
+      font-size: 10px;
+      color: var(--sub-text);
+    }
+    .powered-by a { color: var(--primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<h2>{{ config.title }}</h2>
+
+{% if recommendations %}
+<div class="{{ 'carousel' if config.widget_type == 'carousel' else ('grid' if config.widget_type == 'grid' else 'list') }}">
+  {% for rec in recommendations %}
+  {% set p = rec.product %}
+  <a
+    class="card"
+    href="{{ p.product_url or '#' }}"
+    target="_parent"
+    onclick="trackClick('{{ p.id }}')"
+  >
+    <img
+      src="{{ p.image_url or '' }}"
+      alt="{{ p.name }}"
+      onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/>';"
+    />
+    <div class="card-body">
+      <div class="badge">Recommended</div>
+      <div class="card-name">{{ p.name }}</div>
+      {% if p.price %}
+      <div class="card-price">${{ "%.2f"|format(p.price) }}</div>
+      {% endif %}
+      {% if rec.reason %}
+      <div class="card-reason">{{ rec.reason }}</div>
+      {% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">No recommendations available yet.</div>
+{% endif %}
+
+<div class="powered-by">Powered by <a href="#" target="_blank">RecoAI</a></div>
+
+<script>
+  var STORE_ID = "{{ store_id }}";
+  var WIDGET_URL = "{{ widget_url }}";
+
+  function trackClick(productId) {
+    fetch('/api/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        store_id: STORE_ID,
+        session_id: getSession(),
+        product_id: productId,
+        event_type: 'click'
+      })
+    }).catch(function() {});
+  }
+
+  function getSession() {
+    var key = 'recoai_session_' + STORE_ID;
+    var s = sessionStorage.getItem(key);
+    if (!s) {
+      s = Math.random().toString(36).substr(2, 16);
+      sessionStorage.setItem(key, s);
+    }
+    return s;
+  }
+
+  // Auto-resize iframe from inside
+  function resize() {
+    var h = document.body.scrollHeight;
+    window.parent.postMessage({ recoai_height: h }, '*');
+  }
+  window.addEventListener('load', resize);
+  window.addEventListener('resize', resize);
+</script>
+</body>
+</html>
