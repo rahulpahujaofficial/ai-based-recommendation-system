@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { Link, useLocation, Outlet } from 'react-router-dom'
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Brain, LayoutDashboard, Package, Sparkles, Code2, BarChart3,
-  Settings, Bell, ChevronDown, User, Menu, X, Puzzle, Store
+  Settings, Bell, User, Menu, X, Puzzle, Store
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/context/StoreContext'
+import StoreSwitcher from '@/components/StoreSwitcher'
+import ProfileMenu from '@/components/ProfileMenu'
 
 function SidebarItem({ item, collapsed }) {
   const location = useLocation()
@@ -38,6 +40,7 @@ function SidebarItem({ item, collapsed }) {
 }
 
 export default function DashboardLayout() {
+  const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const { store, productCount, storeId } = useStore()
@@ -69,19 +72,10 @@ export default function DashboardLayout() {
           </Link>
         </div>
 
-        {/* Store info */}
+        {/* Store switcher */}
         {!collapsed && (
           <div className="px-4 py-3 border-b border-white/8">
-            <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/8">
-              <div className="w-6 h-6 rounded bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shrink-0">
-                <Store size={12} className="text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white truncate">{storeName}</p>
-                {storeDomain && <p className="text-[10px] text-white/40 truncate">{storeDomain}</p>}
-              </div>
-              <ChevronDown size={12} className="text-white/40 shrink-0" />
-            </div>
+            <StoreSwitcher />
           </div>
         )}
 
@@ -168,14 +162,17 @@ export default function DashboardLayout() {
             </button>
             <h1 className="text-base font-semibold text-white">Dashboard</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative w-9 h-9 text-white/50 hover:text-white">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative w-9 h-9 text-white/50 hover:text-white"
+              onClick={() => navigate('/dashboard/notifications')}
+            >
               <Bell size={16} />
               <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-violet-500" />
             </Button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-pink-400 flex items-center justify-center cursor-pointer">
-              <User size={14} className="text-white" />
-            </div>
+            <ProfileMenu />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto scrollbar-thin p-6"><Outlet /></main>

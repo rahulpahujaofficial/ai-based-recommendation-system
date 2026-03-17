@@ -49,7 +49,7 @@ export default function HeroSection() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-300 text-sm font-medium mb-6">
             <Zap size={14} className="text-violet-400" />
-            <span>AI-Powered • Shopify Ready • Zero Code</span>
+            <span>AI-Powered • Business Ready • Zero Code</span>
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           </div>
         </motion.div>
@@ -71,7 +71,7 @@ export default function HeroSection() {
           transition={{ duration: 0.7, delay: 0.5 }}
           className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          The AI recommendation engine built for Shopify stores. Analyze user behavior, surface the right products, and boost average order value — embedded in minutes.
+          The AI recommendation engine built for online stores. Analyze user behavior, surface the right products, and boost average order value — embedded in minutes.
         </motion.p>
 
         <motion.div

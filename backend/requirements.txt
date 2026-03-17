@@ -23,6 +23,7 @@ lxml>=5.0
 pydantic>=2.9
 python-multipart>=0.0.12
 werkzeug>=3.0
+PyJWT>=2.8
 
 # Testing
 pytest>=7.4

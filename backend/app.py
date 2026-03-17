@@ -63,19 +63,23 @@ def create_app(config: Config = None) -> Flask:
     # ------------------------------------------------------------------
     # Blueprints
     # ------------------------------------------------------------------
+    from routes.auth import bp as auth_bp
     from routes.products import bp as products_bp
     from routes.ingest import bp as ingest_bp
     from routes.recommendations import bp as recs_bp
     from routes.widget import bp as widget_bp
     from routes.analytics import bp as analytics_bp
     from routes.stores import bp as stores_bp
+    from routes.notifications import bp as notifications_bp
 
+    app.register_blueprint(auth_bp)
     app.register_blueprint(products_bp)
     app.register_blueprint(ingest_bp)
     app.register_blueprint(recs_bp)
     app.register_blueprint(widget_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(stores_bp)
+    app.register_blueprint(notifications_bp)
 
     # ------------------------------------------------------------------
     # DB init

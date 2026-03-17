@@ -1,5 +1,34 @@
 from datetime import datetime, timezone
 from database.db import db
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
+class User(db.Model):
+    """Store owner account."""
+
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    full_name = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    stores = db.relationship("Store", backref="owner", lazy=True, cascade="all, delete-orphan")
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "email": self.email,
+            "full_name": self.full_name,
+            "created_at": self.created_at.isoformat(),
+        }
 
 
 class Store(db.Model):
@@ -9,6 +38,7 @@ class Store(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     store_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     name = db.Column(db.String(255), nullable=False)
     domain = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -22,6 +52,7 @@ class Store(db.Model):
             "store_id": self.store_id,
             "name": self.name,
             "domain": self.domain,
+            "owner_id": self.owner_id,
             "created_at": self.created_at.isoformat(),
         }
 
@@ -168,4 +199,70 @@ class WidgetConfig(db.Model):
             "title": self.title,
             "primary_color": self.primary_color,
             "engine_preference": self.engine_preference or "gemini",
+        }
+
+
+class StoreSettings(db.Model):
+    """Per-store settings for AI behavior and notifications."""
+
+    __tablename__ = "store_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    store_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    # AI behaviour
+    exclude_out_of_stock = db.Column(db.Boolean, default=True)
+    auto_retrain = db.Column(db.Boolean, default=True)
+    cross_sell_only = db.Column(db.Boolean, default=False)
+    # Notifications
+    notify_weekly_report = db.Column(db.Boolean, default=True)
+    notify_model_retrained = db.Column(db.Boolean, default=True)
+    notify_low_credit = db.Column(db.Boolean, default=False)
+    notify_integration_errors = db.Column(db.Boolean, default=True)
+    notify_new_import = db.Column(db.Boolean, default=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "store_id": self.store_id,
+            "exclude_out_of_stock": self.exclude_out_of_stock,
+            "auto_retrain": self.auto_retrain,
+            "cross_sell_only": self.cross_sell_only,
+            "notify_weekly_report": self.notify_weekly_report,
+            "notify_model_retrained": self.notify_model_retrained,
+            "notify_low_credit": self.notify_low_credit,
+            "notify_integration_errors": self.notify_integration_errors,
+            "notify_new_import": self.notify_new_import,
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+class Notification(db.Model):
+    """Log of all notifications sent."""
+
+    __tablename__ = "notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    store_id = db.Column(db.String(64), db.ForeignKey("stores.store_id"), nullable=False, index=True)
+    email = db.Column(db.String(255), nullable=False)
+    event_type = db.Column(db.String(64), nullable=False)  # weekly_report, model_retrained, low_credit, integration_error, new_import
+    subject = db.Column(db.String(255), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    sent_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "store_id": self.store_id,
+            "email": self.email,
+            "event_type": self.event_type,
+            "subject": self.subject,
+            "body": self.body,
+            "sent_at": self.sent_at.isoformat(),
+            "read_at": self.read_at.isoformat() if self.read_at else None,
         }

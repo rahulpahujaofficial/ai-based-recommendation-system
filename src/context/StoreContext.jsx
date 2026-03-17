@@ -22,8 +22,21 @@ export function StoreProvider({ children }) {
         storesApi.list(),
         productsApi.list(id, { per_page: 1 }),
       ])
+
+      if (list.status === 'fulfilled') {
+        const userStores = list.value
+        setStores(userStores)
+        // If the current storeId is not accessible, auto-switch to the user's first store
+        if (userStores.length > 0 && s.status !== 'fulfilled') {
+          const firstId = userStores[0].store_id
+          localStorage.setItem('recoai_store_id', firstId)
+          setStoreId(firstId)
+          setLoading(false)
+          return // useEffect will re-trigger loadStore with the correct id
+        }
+      }
+
       if (s.status === 'fulfilled') setStore(s.value)
-      if (list.status === 'fulfilled') setStores(list.value)
       if (prods.status === 'fulfilled') setProductCount(prods.value.total || 0)
     } catch (_) {}
     setLoading(false)

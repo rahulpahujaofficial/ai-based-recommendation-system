@@ -44,12 +44,35 @@ Current API Base: ${API_BASE}
   }
 }
 
+// Helper function to get auth token
+function getAuthHeaders() {
+  const token = localStorage.getItem('auth_token')
+  return token ? { 'Authorization': `Bearer ${token}` } : {}
+}
+
+// ── Authentication ────────────────────────────────────────────────────────
+export const authApi = {
+  register: (email, password, fullName) => request('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, full_name: fullName })
+  }),
+  login: (email, password) => request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
+  }),
+  logout: () => localStorage.removeItem('auth_token'),
+  getMe: () => request('/api/auth/me', { headers: getAuthHeaders() }),
+}
+
 // ── Stores ──────────────────────────────────────────────────────────────────
 export const storesApi = {
-  list: () => request('/api/stores/'),
-  get: (storeId) => request(`/api/stores/${storeId}`),
-  create: (body) => request('/api/stores/', { method: 'POST', body: JSON.stringify(body) }),
-  update: (storeId, body) => request(`/api/stores/${storeId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  list: () => request('/api/stores/', { headers: getAuthHeaders() }),
+  get: (storeId) => request(`/api/stores/${storeId}`, { headers: getAuthHeaders() }),
+  create: (body) => request('/api/stores/', { method: 'POST', body: JSON.stringify(body), headers: getAuthHeaders() }),
+  update: (storeId, body) => request(`/api/stores/${storeId}`, { method: 'PUT', body: JSON.stringify(body), headers: getAuthHeaders() }),
+  getSettings: (storeId) => request(`/api/stores/${storeId}/settings`, { headers: getAuthHeaders() }),
+  updateSettings: (storeId, body) => request(`/api/stores/${storeId}/settings`, { method: 'PUT', body: JSON.stringify(body), headers: getAuthHeaders() }),
+  deleteData: (storeId) => request(`/api/stores/${storeId}/data`, { method: 'DELETE', headers: getAuthHeaders() }),
 }
 
 // ── Products ─────────────────────────────────────────────────────────────────
@@ -133,4 +156,11 @@ export const analyticsApi = {
     request('/api/analytics/event', { method: 'POST', body: JSON.stringify(body) }),
   productStats: (productId, storeId) =>
     request(`/api/analytics/products/${productId}?store_id=${storeId}`),
+}
+
+// ── Notifications ────────────────────────────────────────────────────────────
+export const notificationsApi = {
+  list: (storeId) => request(`/api/stores/${storeId}/notifications`, { headers: getAuthHeaders() }),
+  markRead: (storeId, notifId) => request(`/api/stores/${storeId}/notifications/${notifId}/read`, { method: 'POST', headers: getAuthHeaders() }),
+  delete: (storeId, notifId) => request(`/api/stores/${storeId}/notifications/${notifId}`, { method: 'DELETE', headers: getAuthHeaders() }),
 }

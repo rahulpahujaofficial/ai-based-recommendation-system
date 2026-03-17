@@ -1,10 +1,10 @@
 node_modules/
 dist/
-.DS_Store
-*.local
-*.log
-.env
-.env.local
+# .DS_Store
+# *.local
+# *.log
+# .env
+# .env.local
 .cache
 build/
 coverage/

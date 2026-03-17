@@ -31,14 +31,14 @@ export default function Hero() {
 
           {/* Headline */}
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight font-syne">
-            Boost Your Shopify
+            Boost Your Business
             <br />
             <span className="gradient-text">Sales with AI</span>
           </h1>
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed">
-            Personalized product recommendations powered by machine learning. Increase AOV by 40%, conversions by 2.5x. Works with any Shopify store.
+            Personalized product recommendations powered by machine learning. Increase AOV by 40%, conversions by 2.5x. Works with any store.
           </p>
 
           {/* CTA Buttons */}

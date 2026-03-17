@@ -8,7 +8,11 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
 
-  if (location.pathname.startsWith('/dashboard')) return null
+  if (
+    location.pathname.startsWith('/dashboard') ||
+    location.pathname === '/login' ||
+    location.pathname === '/register'
+  ) return null
 
   const navLinks = [
     { label: 'Features', href: '#features' },
@@ -39,8 +43,10 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-sm">Sign In</Button>
-            <Link to="/dashboard">
+            <Link to="/login">
+              <Button variant="ghost" size="sm" className="text-sm">Sign In</Button>
+            </Link>
+            <Link to="/register">
               <Button size="sm" className="text-sm"><ArrowRight size={14} /> Get Started</Button>
             </Link>
           </div>
@@ -60,8 +66,10 @@ export default function Navbar() {
                   </a>
                 ))}
                 <div className="pt-3 border-t border-white/8 space-y-2">
-                  <Button variant="outline" size="sm" className="w-full text-sm">Sign In</Button>
-                  <Link to="/dashboard" className="block">
+                  <Link to="/login" className="block">
+                    <Button variant="outline" size="sm" className="w-full text-sm">Sign In</Button>
+                  </Link>
+                  <Link to="/register" className="block">
                     <Button size="sm" className="w-full text-sm"><ArrowRight size={14} /> Get Started</Button>
                   </Link>
                 </div>
