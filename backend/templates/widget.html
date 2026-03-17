@@ -154,11 +154,9 @@
 <div class="{{ 'carousel' if config.widget_type == 'carousel' else ('grid' if config.widget_type == 'grid' else 'list') }}">
   {% for rec in recommendations %}
   {% set p = rec.product %}
-  <a
+  <div
     class="card"
-    href="{{ p.product_url or '#' }}"
-    target="_parent"
-    onclick="trackClick('{{ p.id }}')"
+    onclick="handleProductClick('{{ p.id }}', '{{ p.product_url or '' }}')"
   >
     <img
       src="{{ p.image_url or '' }}"
@@ -175,7 +173,7 @@
       <div class="card-reason">{{ rec.reason }}</div>
       {% endif %}
     </div>
-  </a>
+  </div>
   {% endfor %}
 </div>
 {% else %}
@@ -199,6 +197,13 @@
         event_type: 'click'
       })
     }).catch(function() {});
+  }
+
+  function handleProductClick(productId, url) {
+    trackClick(productId);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   }
 
   function getSession() {

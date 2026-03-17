@@ -1,4 +1,6 @@
-from flask import Blueprint, request, jsonify
+import json
+from datetime import datetime, timezone
+from flask import Blueprint, request, jsonify, Response
 from services.recommendation_engine import (
     get_recommendations,
     get_trending_recommendations,
@@ -209,3 +211,49 @@ def train_sklearn():
         "model": "sklearn",
         **stats,
     })
+
+
+@bp.get("/export-model")
+def export_model():
+    """
+    GET /api/recommendations/export-model?store_id=X
+    Downloads the cached sklearn model data as a JSON file.
+    Must call /train-sklearn first to build the model.
+    """
+    store_id = request.args.get("store_id")
+    if not store_id:
+        return jsonify({"error": "store_id required"}), 400
+
+    stats = get_sklearn_cache(store_id)
+    if not stats or stats.get("status") != "built":
+        return jsonify({"error": "Model not built yet — train the sklearn model first."}), 400
+
+    export_data = {
+        "store_id": store_id,
+        "model_type": "TF-IDF + Cosine Similarity",
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "stats": {
+            "products_indexed": stats["products_indexed"],
+            "vocabulary_size":  stats["vocabulary_size"],
+            "avg_cosine_similarity": stats["avg_cosine_similarity"],
+            "max_cosine_similarity": stats["max_cosine_similarity"],
+            "built_at": stats["built_at"],
+        },
+        "config": {
+            "algorithm":      "TF-IDF + Cosine Similarity",
+            "ngram_range":    [1, 2],
+            "max_features":   5000,
+            "sublinear_tf":   True,
+            "signal_blend":   {"content": 0.5, "collaborative": 0.3, "popularity": 0.2},
+        },
+        "top_features":  stats.get("top_features", stats.get("sample_terms", [])),
+        "product_index": stats.get("product_index", []),
+    }
+
+    return Response(
+        json.dumps(export_data, indent=2, default=str),
+        mimetype="application/json",
+        headers={
+            "Content-Disposition": f"attachment; filename=recoai_model_{store_id}.json",
+        },
+    )

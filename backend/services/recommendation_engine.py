@@ -349,8 +349,16 @@ def build_sklearn_model(store_id: str) -> dict:
     # Top terms by document frequency (most widespread)
     feature_names = vectorizer.get_feature_names_out()
     doc_freq = np.asarray(matrix.sum(axis=0)).flatten()
-    top_indices = doc_freq.argsort()[-15:][::-1]
-    sample_terms = [feature_names[i] for i in top_indices]
+    top_indices = doc_freq.argsort()[-50:][::-1]
+    all_top_terms = [feature_names[i] for i in top_indices]
+    sample_terms = all_top_terms[:15]   # display subset
+    top_features = all_top_terms        # full list for export
+
+    # Lightweight product index for export (id + name + category)
+    product_index = [
+        {"id": p.id, "name": p.name, "category": p.category or ""}
+        for p in products
+    ]
 
     stats = {
         "status": "built",
@@ -359,6 +367,8 @@ def build_sklearn_model(store_id: str) -> dict:
         "avg_cosine_similarity": round(avg_sim, 4),
         "max_cosine_similarity": round(max_sim, 4),
         "sample_terms": sample_terms,
+        "top_features": top_features,
+        "product_index": product_index,
         "built_at": datetime.now(timezone.utc).isoformat(),
     }
     _sklearn_cache[store_id] = stats

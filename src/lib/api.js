@@ -3,7 +3,9 @@
  * Base URL is read from the VITE_API_BASE_URL env var (defaults to localhost:5000).
  */
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+// When VITE_API_BASE_URL is unset, fall back to localhost.
+// Set it to an empty string ("") to use the Vite dev proxy (recommended for Codespaces).
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000'
 
 // Log API configuration in development
 if (import.meta.env.DEV) {
@@ -57,7 +59,7 @@ export const productsApi = {
     return request(`/api/products/?${qs}`)
   },
   get: (id, storeId) => request(`/api/products/${id}?store_id=${storeId}`),
-  create: (body) => request('http://localhost:5000/api/products/', { method: 'POST', body: JSON.stringify(body) }),
+  create: (body) => request('/api/products/', { method: 'POST', body: JSON.stringify(body) }),
   update: (id, body) => request(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   delete: (id, storeId) => request(`/api/products/${id}?store_id=${storeId}`, { method: 'DELETE' }),
   categories: (storeId) => request(`/api/products/categories?store_id=${storeId}`),
@@ -94,6 +96,19 @@ export const recsApi = {
   engineInfo: (storeId) => request(`/api/recommendations/engine-info?store_id=${storeId}`),
   retrain: (storeId) =>
     request('/api/recommendations/retrain', { method: 'POST', body: JSON.stringify({ store_id: storeId }) }),
+  selectEngine: (storeId, engine) =>
+    request('/api/recommendations/select-engine', { method: 'POST', body: JSON.stringify({ store_id: storeId, engine }) }),
+  trainSklearn: (storeId) =>
+    request('/api/recommendations/train-sklearn', { method: 'POST', body: JSON.stringify({ store_id: storeId }) }),
+  // Returns a Blob — caller must trigger the browser download
+  exportModel: async (storeId) => {
+    const res = await fetch(`${API_BASE}/api/recommendations/export-model?store_id=${storeId}`)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `HTTP ${res.status}`)
+    }
+    return res.blob()
+  },
 }
 
 // ── Widget ───────────────────────────────────────────────────────────────────

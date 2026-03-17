@@ -14,6 +14,19 @@ export default defineConfig({
     port: 5173,
     strictPort: false,
     cors: true,
+    proxy: {
+      // Forward all /api/* and /widget/* requests to the Flask backend.
+      // This runs server-side (no browser CORS) and works both in local dev
+      // and inside GitHub Codespaces where the browser cannot reach localhost:5000 directly.
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+      '/widget': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     rollupOptions: {

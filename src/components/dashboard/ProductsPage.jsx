@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Search, Plus, Upload, Grid3X3, List, Star, Package,
-  Trash2, Edit2, Eye, CheckCircle2, Clock, X, Save
+  Trash2, Edit2, Eye, CheckCircle2, Clock, X, Save, Archive, FileText
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -84,7 +84,11 @@ function ProductCard({ product, view, onEdit, onDelete }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <p className="text-sm font-medium text-white truncate">{p.name}</p>
-            <Badge variant={p.status === 'active' ? 'success' : 'warning'} className="text-[10px] py-0 shrink-0">{p.status}</Badge>
+            <Badge
+              variant={p.status === 'active' ? 'success' : p.status === 'draft' ? 'warning' : 'secondary'}
+              className="text-[10px] py-0 shrink-0">
+              {p.status}
+            </Badge>
           </div>
           <p className="text-xs text-white/40">{p.category} · {p.stock} in stock</p>
         </div>
@@ -112,8 +116,13 @@ function ProductCard({ product, view, onEdit, onDelete }) {
         }
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute top-3 left-3">
-          <Badge variant={p.status === 'active' ? 'success' : 'warning'} className="text-[10px]">
-            {p.status === 'active' ? <CheckCircle2 size={9} className="mr-1" /> : <Clock size={9} className="mr-1" />}{p.status}
+          <Badge
+            variant={p.status === 'active' ? 'success' : p.status === 'draft' ? 'warning' : 'secondary'}
+            className="text-[10px]">
+            {p.status === 'active' && <CheckCircle2 size={9} className="mr-1" />}
+            {p.status === 'draft' && <FileText size={9} className="mr-1" />}
+            {p.status === 'archived' && <Archive size={9} className="mr-1" />}
+            {p.status}
           </Badge>
         </div>
         <div className={cn('absolute inset-0 flex items-center justify-center gap-2 transition-opacity duration-200', showActions ? 'opacity-100' : 'opacity-0')}>
@@ -493,6 +502,7 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
+  const [activeStatus, setActiveStatus] = useState('active')  // 'active', 'draft', 'archived'
   const [view, setView] = useState('grid')
 
   // State: Loading and modals
@@ -512,10 +522,10 @@ export default function ProductsPage() {
   const fetchProducts = useCallback(async () => {
     setLoading(true)
     try {
-      const params = { page, per_page: 20 }
+      const params = { page, per_page: 20, status: activeStatus }
       if (search) params.q = search
       if (activeCategory !== 'All') params.category = activeCategory
-      
+
       const data = await productsApi.list(storeId, params)
       setProducts(data.products || [])
       setTotal(data.total || 0)
@@ -523,7 +533,7 @@ export default function ProductsPage() {
       console.error('Failed to fetch products:', err)
     }
     setLoading(false)
-  }, [storeId, page, search, activeCategory])
+  }, [storeId, page, search, activeCategory, activeStatus])
 
   /**
    * Fetch categories for filter
@@ -554,6 +564,14 @@ export default function ProductsPage() {
    */
   const handleCategory = useCallback((cat) => {
     setActiveCategory(cat)
+    setPage(1)
+  }, [])
+
+  /**
+   * Handle status filter change
+   */
+  const handleStatus = useCallback((status) => {
+    setActiveStatus(status)
     setPage(1)
   }, [])
 
@@ -623,16 +641,42 @@ export default function ProductsPage() {
           <Input placeholder="Search products…" className="pl-9 h-9" value={search}
             onChange={(e) => handleSearch(e.target.value)} />
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin pb-1">
-          {categories.map((cat) => (
-            <button key={cat} onClick={() => handleCategory(cat)}
-              className={cn('px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer',
-                activeCategory === cat ? 'bg-violet-600 text-white' : 'glass-card text-white/50 hover:text-white')}>
-              {cat}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          {/* Category filter */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin pb-1">
+            {categories.map((cat) => (
+              <button key={cat} onClick={() => handleCategory(cat)}
+                className={cn('px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer',
+                  activeCategory === cat ? 'bg-violet-600 text-white' : 'glass-card text-white/50 hover:text-white')}>
+                {cat}
+              </button>
+            ))}
+          </div>
+          {/* Status filter */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin pb-1 border-l border-white/10 pl-3">
+            {[
+              { id: 'active', label: 'Active', icon: CheckCircle2 },
+              { id: 'draft', label: 'Draft', icon: FileText },
+              { id: 'archived', label: 'Archived', icon: Archive },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => handleStatus(id)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5',
+                  activeStatus === id
+                    ? id === 'active' ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-400'
+                      : id === 'draft' ? 'bg-amber-600/20 border border-amber-500/30 text-amber-400'
+                      : 'bg-slate-600/20 border border-slate-500/30 text-slate-400'
+                    : 'glass-card text-white/50 hover:text-white',
+                )}>
+                <Icon size={12} />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-1 glass-card rounded-lg p-1">
+        <div className="flex items-center gap-1 glass-card rounded-lg p-1 shrink-0">
           <button onClick={() => setView('grid')} className={cn('p-1.5 rounded cursor-pointer transition-colors', view === 'grid' ? 'bg-violet-600 text-white' : 'text-white/40 hover:text-white')}><Grid3X3 size={14} /></button>
           <button onClick={() => setView('list')} className={cn('p-1.5 rounded cursor-pointer transition-colors', view === 'list' ? 'bg-violet-600 text-white' : 'text-white/40 hover:text-white')}><List size={14} /></button>
         </div>
