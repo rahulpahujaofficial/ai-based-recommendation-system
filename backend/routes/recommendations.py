@@ -1,7 +1,13 @@
 from flask import Blueprint, request, jsonify
-from services.recommendation_engine import get_recommendations, get_trending_recommendations
+from services.recommendation_engine import (
+    get_recommendations,
+    get_trending_recommendations,
+    build_sklearn_model,
+    get_sklearn_cache,
+)
 from services.ai_service import analyze_product
-from models import Product
+from models import Product, WidgetConfig
+from database.db import db
 import os
 
 bp = Blueprint("recommendations", __name__, url_prefix="/api/recommendations")
@@ -25,7 +31,11 @@ def recommend():
         return jsonify({"engine": "trending", "recommendations": recs})
 
     session_id = request.args.get("session_id")
+    # engine param: explicit URL param → stored preference → env var fallback
     engine = request.args.get("engine")
+    if not engine:
+        widget = WidgetConfig.query.filter_by(store_id=store_id).first()
+        engine = (widget.engine_preference if widget and widget.engine_preference else None)
     max_items = request.args.get("max_items", default=6, type=int)
 
     try:
@@ -121,26 +131,81 @@ def bulk_retrain():
 
 @bp.get("/engine-info")
 def engine_info():
-    """Return current engine configuration and product stats."""
+    """Return current engine configuration, sklearn cache stats, and product counts."""
     store_id = request.args.get("store_id")
     if not store_id:
         return jsonify({"error": "store_id required"}), 400
 
     from models import Recommendation
-    from database.db import db
-    from sqlalchemy import func
 
     total_products = Product.query.filter_by(store_id=store_id, status="active").count()
     total_recs = Recommendation.query.filter_by(store_id=store_id).count()
-    engine = os.getenv("RECOMMENDATION_ENGINE", "gemini")
+    env_engine = os.getenv("RECOMMENDATION_ENGINE", "gemini")
     has_gemini_key = bool(os.getenv("GEMINI_API_KEY"))
 
+    # Per-store engine preference stored in WidgetConfig
+    widget = WidgetConfig.query.filter_by(store_id=store_id).first()
+    selected_engine = (widget.engine_preference if widget and widget.engine_preference else env_engine)
+
+    # Sklearn model cache (populated by /train-sklearn)
+    sklearn_stats = get_sklearn_cache(store_id)
+
     return jsonify({
-        "engine": engine,
+        "engine": selected_engine,
+        "selected_engine": selected_engine,
+        "env_engine": env_engine,
         "gemini_available": has_gemini_key,
         "total_products": total_products,
         "total_recommendations": total_recs,
         "model_version": "v2.4",
         "accuracy": min(99, 70 + total_products * 2) if total_products else 0,
         "coverage": min(99, 60 + total_products * 3) if total_products else 0,
+        "sklearn": sklearn_stats,  # None until /train-sklearn is called
+    })
+
+
+@bp.post("/select-engine")
+def select_engine():
+    """
+    POST /api/recommendations/select-engine
+    Body: { store_id, engine }   engine = "gemini" | "custom"
+    Persists the engine preference in the store's WidgetConfig.
+    """
+    data = request.get_json(silent=True) or {}
+    store_id = data.get("store_id")
+    engine = data.get("engine")
+
+    if not store_id:
+        return jsonify({"error": "store_id required"}), 400
+    if engine not in ("gemini", "custom"):
+        return jsonify({"error": "engine must be 'gemini' or 'custom'"}), 400
+
+    widget = WidgetConfig.query.filter_by(store_id=store_id).first()
+    if not widget:
+        return jsonify({"error": "Store not found — create a store first"}), 404
+
+    widget.engine_preference = engine
+    db.session.commit()
+
+    return jsonify({"store_id": store_id, "engine": engine, "status": "updated"})
+
+
+@bp.post("/train-sklearn")
+def train_sklearn():
+    """
+    POST /api/recommendations/train-sklearn
+    Body: { store_id }
+    Builds the TF-IDF / cosine-similarity model for the store and returns stats.
+    """
+    data = request.get_json(silent=True) or {}
+    store_id = data.get("store_id")
+    if not store_id:
+        return jsonify({"error": "store_id required"}), 400
+
+    stats = build_sklearn_model(store_id)
+
+    return jsonify({
+        "store_id": store_id,
+        "model": "sklearn",
+        **stats,
     })

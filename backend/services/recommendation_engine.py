@@ -13,6 +13,7 @@ import json
 import logging
 import os
 from collections import defaultdict
+from datetime import datetime, timezone
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -23,6 +24,14 @@ from database.db import db
 from models import Product, Recommendation, UserBehavior
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Per-store sklearn model cache (populated by build_sklearn_model)
+# ---------------------------------------------------------------------------
+
+_sklearn_cache: dict[str, dict] = {}
+# Shape: { store_id: { products_indexed, vocabulary_size, avg_similarity,
+#                      max_similarity, sample_terms, built_at } }
 
 
 # ---------------------------------------------------------------------------
@@ -288,3 +297,74 @@ def get_trending_recommendations(store_id: str, max_items: int = 6) -> list[dict
         .all()
     )
     return [{"product": p.to_dict(), "score": 1.0, "reason": "Trending in your store"} for p in products]
+
+
+def build_sklearn_model(store_id: str) -> dict:
+    """
+    Explicitly build the TF-IDF / cosine-similarity model for a store and
+    cache the result.  Returns a statistics dict that is also stored in
+    _sklearn_cache[store_id] for fast retrieval by engine-info.
+    """
+    products = Product.query.filter_by(store_id=store_id, status="active").all()
+
+    if not products:
+        stats = {
+            "status": "no_products",
+            "products_indexed": 0,
+            "vocabulary_size": 0,
+            "avg_cosine_similarity": 0.0,
+            "max_cosine_similarity": 0.0,
+            "sample_terms": [],
+            "built_at": datetime.now(timezone.utc).isoformat(),
+        }
+        _sklearn_cache[store_id] = stats
+        return stats
+
+    corpus = [_product_text(p) for p in products]
+
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=5000, sublinear_tf=True)
+    try:
+        matrix = vectorizer.fit_transform(corpus)
+    except ValueError as exc:
+        stats = {
+            "status": "error",
+            "error": str(exc),
+            "products_indexed": len(products),
+            "vocabulary_size": 0,
+        }
+        _sklearn_cache[store_id] = stats
+        return stats
+
+    vocab_size = len(vectorizer.vocabulary_)
+
+    # Cosine similarity stats (only realistic for small catalogs)
+    if len(products) <= 500:
+        sim_matrix = cosine_similarity(matrix)
+        np.fill_diagonal(sim_matrix, 0)  # exclude self-similarity
+        avg_sim = float(np.mean(sim_matrix))
+        max_sim = float(np.max(sim_matrix)) if sim_matrix.size > 0 else 0.0
+    else:
+        avg_sim, max_sim = 0.0, 0.0  # skip for large catalogs
+
+    # Top terms by document frequency (most widespread)
+    feature_names = vectorizer.get_feature_names_out()
+    doc_freq = np.asarray(matrix.sum(axis=0)).flatten()
+    top_indices = doc_freq.argsort()[-15:][::-1]
+    sample_terms = [feature_names[i] for i in top_indices]
+
+    stats = {
+        "status": "built",
+        "products_indexed": len(products),
+        "vocabulary_size": vocab_size,
+        "avg_cosine_similarity": round(avg_sim, 4),
+        "max_cosine_similarity": round(max_sim, 4),
+        "sample_terms": sample_terms,
+        "built_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _sklearn_cache[store_id] = stats
+    return stats
+
+
+def get_sklearn_cache(store_id: str) -> dict | None:
+    """Return cached sklearn model stats for a store, or None if not built yet."""
+    return _sklearn_cache.get(store_id)

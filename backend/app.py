@@ -82,6 +82,18 @@ def create_app(config: Config = None) -> Flask:
     # ------------------------------------------------------------------
     with app.app_context():
         db.create_all()
+        # Safe migration: add engine_preference column to widget_configs if it
+        # doesn't exist yet (SQLite won't add it via create_all on existing tables).
+        from sqlalchemy import text
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(text(
+                    "ALTER TABLE widget_configs "
+                    "ADD COLUMN engine_preference VARCHAR(32) DEFAULT 'gemini'"
+                ))
+                conn.commit()
+        except Exception:
+            pass  # Column already exists — this is the happy path
 
     # ------------------------------------------------------------------
     # Health check

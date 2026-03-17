@@ -149,6 +149,7 @@ class WidgetConfig(db.Model):
     max_items = db.Column(db.Integer, default=6)
     title = db.Column(db.String(255), default="Recommended for You")
     primary_color = db.Column(db.String(16), default="#8b5cf6")
+    engine_preference = db.Column(db.String(32), default="gemini")
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
         db.DateTime,
@@ -166,4 +167,5 @@ class WidgetConfig(db.Model):
             "max_items": self.max_items,
             "title": self.title,
             "primary_color": self.primary_color,
+            "engine_preference": self.engine_preference or "gemini",
         }
